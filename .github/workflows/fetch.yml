@@ -2,8 +2,8 @@ name: youtube-view-fetch
 
 on:
   schedule:
-    - cron: "0 * * * *"   # 毎時0分に実行（24時間自動収集）
-  workflow_dispatch:       # 手動実行も可能
+    - cron: "0 * * * *"
+  workflow_dispatch:
 
 jobs:
   run:
@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -25,3 +27,11 @@ jobs:
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: python fetch.py
+
+      - name: Commit CSV
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add view_history_hourly.csv
+          git commit -m "Update CSV"
+          git push
