@@ -1,6 +1,6 @@
 import os
 import csv
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from googleapiclient.discovery import build
 
 API_KEY = os.getenv("YOUTUBE_API_KEY")
@@ -17,7 +17,10 @@ VIDEO_IDS = [
 def main():
     youtube = build("youtube", "v3", developerKey=API_KEY)
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    # ★ JST（日本時間）に固定
+    JST = timezone(timedelta(hours=9))
+    now = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
+
     rows = []
 
     # 50件ずつバッチ処理
