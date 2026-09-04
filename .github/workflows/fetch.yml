@@ -15,7 +15,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
-          persist-credentials: true   # ← これが必要
+          persist-credentials: true
           path: .
 
       - name: Set up Python
@@ -24,7 +24,9 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install google-api-python-client
+        run: |
+          pip install google-api-python-client
+          pip install pandas
 
       - name: Run script
         env:
