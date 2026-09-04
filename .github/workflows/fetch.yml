@@ -1,0 +1,27 @@
+name: youtube-view-fetch
+
+on:
+  schedule:
+    - cron: "0 * * * *"   # 毎時0分に実行（24時間自動収集）
+  workflow_dispatch:       # 手動実行も可能
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install google-api-python-client
+
+      - name: Run script
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: python fetch.py
