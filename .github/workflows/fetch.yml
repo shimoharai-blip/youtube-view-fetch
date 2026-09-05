@@ -2,24 +2,24 @@ name: youtube-view-fetch
 
 on:
   schedule:
-    - cron: "2 * * * *"
+    - cron: "58 * * * *"   # JST 毎時7分（混雑帯完全回避）
   workflow_dispatch:
 
-jobs:
-  run:
-    runs-on: ubuntu-latest
+concurrency:
+  group: youtube-fetch
+  cancel-in-progress: true
 
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
           persist-credentials: true
-          path: .
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
 
@@ -33,10 +33,20 @@ jobs:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: python fetch.py
 
+  commit:
+    needs: fetch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          persist-credentials: true
+
       - name: Commit CSV
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add view_history_hourly.csv
-          git commit -m "Update CSV" || echo "No changes to commit"
+          git commit -m "Update CSV" || echo "No changes"
           git push
