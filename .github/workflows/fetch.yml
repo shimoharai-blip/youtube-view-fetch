@@ -55,3 +55,36 @@ jobs:
           git add view_history_hourly.csv
           git commit -m "Update CSV" || echo "No changes"
           git push
+
+  analysis:
+    needs: commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: false
+
+      - name: Download CSV
+        uses: actions/download-artifact@v4
+        with:
+          name: csv
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas matplotlib
+
+      - name: Run analysis
+        run: python analysis.py
+
+      - name: Upload analysis report
+        uses: actions/upload-artifact@v4
+        with:
+          name: analysis
+          path: |
+            analysis_report.md
+            graph_*.png
