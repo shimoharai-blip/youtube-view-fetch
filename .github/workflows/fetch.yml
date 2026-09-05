@@ -2,7 +2,7 @@ name: youtube-view-fetch
 
 on:
   schedule:
-    - cron: "51 * * * *"
+    - cron: "52 * * * *"
   workflow_dispatch:
 
 jobs:
