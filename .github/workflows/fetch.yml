@@ -2,7 +2,7 @@ name: youtube-view-fetch
 
 on:
   schedule:
-    - cron: "15 * * * *"   # JST00分に最も近い
+    - cron: "15 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -28,7 +28,7 @@ jobs:
         run: python fetch.py
 
       - name: Upload CSV
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4   # ← 修正ポイント
         with:
           name: csv
           path: view_history_hourly.csv
@@ -41,10 +41,10 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: true
-          clean: false   # ← これがないと CSV が消えて commit が動かない
+          clean: false
 
       - name: Download CSV
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4   # ← 修正ポイント
         with:
           name: csv
 
