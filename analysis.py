@@ -19,7 +19,6 @@ def load_csv():
         "timestamp": "timestamp"
     })
 
-    # videoId が無い場合は落ちないようにする
     if "videoId" not in df.columns:
         raise ValueError("CSV に videoId 列がありません。fetch.py の出力を確認してください。")
 
@@ -78,8 +77,37 @@ def generate_ranking(df):
 # スパイク検出（精度改善）
 # =========================
 def detect_spikes(df):
-    # 3倍以上の急増をスパイクとする
     return df[df["spike_strength"] > 3]
+
+
+# =========================
+# 海外流入検出（深夜・早朝・日中の伸びを比較）
+# =========================
+def detect_overseas_inflow(df):
+    df["hour"] = df["timestamp"].dt.hour
+
+    late = df[(df["hour"] >= 23) | (df["hour"] <= 3)]
+    early = df[(df["hour"] >= 4) & (df["hour"] <= 8)]
+    daytime = df[(df["hour"] >= 10) & (df["hour"] <= 17)]
+
+    def ratio(sub):
+        if len(sub) == 0:
+            return 0
+        return (sub["view_per_hour"].mean() /
+                sub["rolling_base"].mean())
+
+    late_ratio = ratio(late)
+    early_ratio = ratio(early)
+    day_ratio = ratio(daytime)
+
+    score = (late_ratio + early_ratio + day_ratio) / 3
+
+    return {
+        "late_ratio": late_ratio,
+        "early_ratio": early_ratio,
+        "day_ratio": day_ratio,
+        "score": score
+    }
 
 
 # =========================
@@ -109,7 +137,7 @@ def generate_graphs(df):
 
 
 # =========================
-# レポート生成（デザイン改善）
+# レポート生成（海外流入統合）
 # =========================
 def generate_report(ranking, spikes, df):
     md = []
@@ -137,6 +165,24 @@ def generate_report(ranking, spikes, df):
     else:
         md.append("> **スパイク発生！** 以下の時間帯で急増が確認されました。\n")
         md.append(spikes[["timestamp", "title", "view_per_hour", "spike_strength"]].to_markdown())
+    md.append("\n")
+
+    # 海外流入検出
+    md.append("## 🌏 海外流入の検出\n")
+    overseas = detect_overseas_inflow(df)
+
+    md.append(f"- 深夜帯の強度: **{overseas['late_ratio']:.2f}x**")
+    md.append(f"- 早朝帯の強度: **{overseas['early_ratio']:.2f}x**")
+    md.append(f"- 日中帯の強度: **{overseas['day_ratio']:.2f}x**")
+    md.append(f"- 総合スコア: **{overseas['score']:.2f}**\n")
+
+    if overseas["score"] >= 0.7:
+        md.append("> **海外流入が強く再発しています（スパイク前兆）**\n")
+    elif overseas["score"] >= 0.4:
+        md.append("> **弱い海外流入が発生中（再発の前兆）**\n")
+    else:
+        md.append("> **海外流入は観測されていません（国内中心）**\n")
+
     md.append("\n")
 
     # グラフ
