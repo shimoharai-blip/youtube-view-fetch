@@ -2,7 +2,7 @@ name: youtube-view-fetch
 
 on:
   schedule:
-    - cron: "58 * * * *"   # JST 毎時7分（混雑帯完全回避）
+    - cron: "15 * * * *"   # JST 毎時00分に最も近い（UTC 15分 → JST 00分）
   workflow_dispatch:
 
 concurrency:
