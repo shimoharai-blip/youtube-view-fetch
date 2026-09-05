@@ -2,12 +2,8 @@ name: youtube-view-fetch
 
 on:
   schedule:
-    - cron: "15 * * * *"   # JST 毎時00分に最も近い（UTC 15分 → JST 00分）
+    - cron: "15 * * * *"   # JST00分に最も近い
   workflow_dispatch:
-
-concurrency:
-  group: youtube-fetch
-  cancel-in-progress: true
 
 jobs:
   fetch:
@@ -15,9 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
-          persist-credentials: true
 
       - uses: actions/setup-python@v4
         with:
@@ -28,10 +22,16 @@ jobs:
           pip install google-api-python-client
           pip install pandas
 
-      - name: Run script
+      - name: Run fetch
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: python fetch.py
+
+      - name: Upload CSV
+        uses: actions/upload-artifact@v3
+        with:
+          name: csv
+          path: view_history_hourly.csv
 
   commit:
     needs: fetch
@@ -39,9 +39,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
           persist-credentials: true
+          clean: false   # ← これがないと CSV が消えて commit が動かない
+
+      - name: Download CSV
+        uses: actions/download-artifact@v3
+        with:
+          name: csv
 
       - name: Commit CSV
         run: |
