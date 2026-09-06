@@ -47,8 +47,13 @@ def fetch_views():
         if new_file:
             w.writerow(["timestamp", "videoId", "title", "views"])
         w.writerows(rows)
-
+    
     print(f"{now} 完了（GitHub Actions）")
+
+    # ここを追加
+    mtime = datetime.fromtimestamp(os.path.getmtime(CSV_FILE))
+    print("DEBUG: RAW mtime =", mtime.strftime("%Y-%m-%d %H:%M:%S"))
+
     return rows
 
 def main():
