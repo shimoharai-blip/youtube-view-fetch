@@ -167,6 +167,9 @@ def generate_report(df):
     processed_df["timestamp"] = pd.to_datetime(processed_df["timestamp"], errors="coerce")
     processed_df["spike_strength"] = pd.to_numeric(processed_df["spike_strength"], errors="coerce")
 
+    # ★ 過去の壊れた行（timestamp 空欄）を完全除去 ← これが重要
+    processed_df = processed_df.dropna(subset=["timestamp"])
+
     propagation = detect_propagation(processed_df)
     md.extend(propagation)
 
@@ -178,7 +181,6 @@ def generate_report(df):
 
     with open(REPORT_MD, "w", encoding="utf-8") as f:
         f.write("\n".join(md))
-
 
 # =========================
 # メイン処理
