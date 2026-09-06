@@ -162,11 +162,9 @@ def generate_report(df):
     # 波及モデル
     processed_df = pd.read_csv(PROCESSED_CSV)
 
-processed_df["timestamp"] = pd.to_datetime(processed_df["timestamp"], errors="coerce")
-processed_df["spike_strength"] = pd.to_numeric(processed_df["spike_strength"], errors="coerce")
-
-    # ★★★ ここを追加（processed CSV の timestamp を統一）
+    # ★ processed CSV の timestamp / spike_strength を完全統一
     processed_df["timestamp"] = pd.to_datetime(processed_df["timestamp"], errors="coerce")
+    processed_df["spike_strength"] = pd.to_numeric(processed_df["spike_strength"], errors="coerce")
 
     propagation = detect_propagation(processed_df)
     md.extend(propagation)
@@ -179,6 +177,7 @@ processed_df["spike_strength"] = pd.to_numeric(processed_df["spike_strength"], e
 
     with open(REPORT_MD, "w", encoding="utf-8") as f:
         f.write("\n".join(md))
+
 
 # =========================
 # メイン処理
