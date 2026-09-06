@@ -22,9 +22,10 @@ VERSION_MAP = {
 # =========================
 def load_csv():
     df = pd.read_csv(RAW_CSV)
-
-    # ★ timestamp を完全統一（過去データも救済）
     df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+
+    # ★ 過去の壊れた行（timestamp 空欄）を完全除去
+    df = df.dropna(subset=["timestamp"])
 
     df = df.sort_values(["videoId", "timestamp"])
     return df
