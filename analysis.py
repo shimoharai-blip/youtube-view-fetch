@@ -21,7 +21,24 @@ VERSION_MAP = {
 # =========================
 # CSV読み込み（raw）
 # =========================
+import time
+
 def load_csv():
+    print("=== DEBUG: RAW_CSV path ===")
+    print("RAW_CSV =", RAW_CSV)
+
+    print("=== DEBUG: RAW_CSV absolute path ===")
+    print("abs =", os.path.abspath(RAW_CSV))
+
+    print("=== DEBUG: RAW_CSV exists? ===")
+    print("exists =", os.path.exists(RAW_CSV))
+
+    if os.path.exists(RAW_CSV):
+        print("=== DEBUG: RAW_CSV file stats ===")
+        st = os.stat(RAW_CSV)
+        print("size =", st.st_size, "bytes")
+        print("mtime =", time.ctime(st.st_mtime))
+
     df = pd.read_csv(RAW_CSV)
     df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
 
