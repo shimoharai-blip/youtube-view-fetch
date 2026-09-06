@@ -205,7 +205,7 @@ def generate_report(df):
     md.append("\n")
 
     processed_df = pd.read_csv(PROCESSED_CSV)
-    processed_df["timestamp"] = pd.to_datetime(processed_df["timestamp"], errors="coerce")
+    processed_df["timestamp"] = processed_df["timestamp"].apply(parse_ts)
     processed_df["timestamp"] = processed_df["timestamp"].dt.floor("min")
     processed_df["spike_strength"] = pd.to_numeric(processed_df["spike_strength"], errors="coerce")
     processed_df = processed_df.dropna(subset=["timestamp"])
