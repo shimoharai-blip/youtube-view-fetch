@@ -1,4 +1,4 @@
-name: youtube-view-fetch
+name: Fetch YouTube Raw Data
 
 on:
   schedule:
@@ -8,86 +8,27 @@ on:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
-      - uses: actions/setup-python@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: "3.12"
 
       - name: Install dependencies
         run: |
-          pip install google-api-python-client
-          pip install pandas
+          pip install google-api-python-client pandas
 
-      - name: Run fetch
-        env:
-          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      - name: Run fetch.py
         run: python fetch.py
 
-      - name: Upload CSV
-        uses: actions/upload-artifact@v4   # ← 修正ポイント
-        with:
-          name: csv
-          path: view_history_hourly.csv
-
-  commit:
-    needs: fetch
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          persist-credentials: true
-          clean: false
-
-      - name: Download CSV
-        uses: actions/download-artifact@v4   # ← 修正ポイント
-        with:
-          name: csv
-
-      - name: Commit CSV
+      - name: Commit raw CSV
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add view_history_hourly.csv
-          git commit -m "Update CSV" || echo "No changes"
+          git add view_history_hourly_raw.csv
+          git commit -m "Update raw CSV"
           git push
-
-  analysis:
-    needs: commit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          clean: false
-
-      - name: Download CSV
-        uses: actions/download-artifact@v4
-        with:
-          name: csv
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: |
-          pip install pandas matplotlib tabulate
-          sudo apt-get update
-          sudo apt-get install -y fonts-ipafont
-
-      - name: Run analysis
-        run: python analysis.py
-
-      - name: Upload analysis report
-        uses: actions/upload-artifact@v4
-        with:
-          name: analysis
-          path: |
-            analysis_report.md
-            graph_*.png
-
