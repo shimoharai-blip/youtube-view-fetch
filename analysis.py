@@ -111,7 +111,6 @@ def calc_metrics(df):
             .mean()
         )
     )
-    roll24.index = roll24.index.droplevel(0)
     df["roll24"] = roll24.reindex(df.index)
 
     # 5. 過去7時間平均（apply 内で view_per_hour を再計算）
@@ -128,7 +127,6 @@ def calc_metrics(df):
             .mean()
         )
     )
-    roll7.index = roll7.index.droplevel(0)
     df["roll7"] = roll7.reindex(df.index)
 
     # 6. rolling_base
