@@ -104,14 +104,14 @@ def calc_metrics(df):
     # 4. 過去24時間平均（時間ベース rolling）
     # =========================
     df["roll24"] = gb.apply(
-        lambda g: g.set_index("timestamp")["view_per_hour"].rolling("24H").mean()
+        lambda g: g.set_index("timestamp")["view_per_hour"].rolling("24h").mean()
     ).reset_index(level=0, drop=True)
 
     # =========================
     # 5. 過去7時間平均（時間ベース rolling）
     # =========================
     df["roll7"] = gb.apply(
-        lambda g: g.set_index("timestamp")["view_per_hour"].rolling("7H").mean()
+        lambda g: g.set_index("timestamp")["view_per_hour"].rolling("7h").mean()
     ).reset_index(level=0, drop=True)
 
     # =========================
