@@ -81,43 +81,35 @@ def load_csv():
 def calc_metrics(df):
     gb = df.groupby("videoId")
 
-    # 1. 実時間差（時間）
-    df["time_diff_hours"] = gb["timestamp"].diff().dt.total_seconds() / 3600
+    # ★ timestamp NaT を完全除去
+    df = df.dropna(subset=["timestamp"])
 
-    # 2. views 差分
+    df["time_diff_hours"] = gb["timestamp"].diff().dt.total_seconds() / 3600
     df["views_diff"] = gb["views"].diff()
 
-    # 3. view_per_hour（views_diff ÷ 実時間差）
     df["view_per_hour"] = df.apply(
         lambda row: row["views_diff"] / row["time_diff_hours"]
         if row["time_diff_hours"] and row["time_diff_hours"] > 0 else 0,
         axis=1
     )
 
-    # 4. 過去24時間平均（applyでSeriesを返す）
     roll24 = gb.apply(
-        lambda g: g.set_index("timestamp")["view_per_hour"].rolling("24h").mean()
+        lambda g: g.set_index("timestamp").sort_index()["view_per_hour"].rolling("24h").mean()
     )
-    roll24.index = roll24.index.droplevel(0)  # videoId の階層を落とす
+    roll24.index = roll24.index.droplevel(0)
     df["roll24"] = roll24
 
-    # 5. 過去7時間平均（applyでSeriesを返す）
     roll7 = gb.apply(
-        lambda g: g.set_index("timestamp")["view_per_hour"].rolling("7h").mean()
+        lambda g: g.set_index("timestamp").sort_index()["view_per_hour"].rolling("7h").mean()
     )
     roll7.index = roll7.index.droplevel(0)
     df["roll7"] = roll7
 
-    # 6. rolling_base
     df["rolling_base"] = df["roll24"].fillna(df["roll7"])
-
-    # 7. spike_strength
     df["spike_strength"] = df["view_per_hour"] / df["rolling_base"].replace(0, np.nan)
     df["spike_strength"] = df["spike_strength"].fillna(0)
 
-    # 8. version
     df["version"] = df["videoId"].map(VERSION_MAP)
-
     return df
 # =========================
 # processed CSV 追記
