@@ -21,7 +21,11 @@ VERSION_MAP = {
 # CSV読み込み（raw）
 # =========================
 def load_csv():
-    df = pd.read_csv(RAW_CSV, parse_dates=["timestamp"])
+    df = pd.read_csv(RAW_CSV)
+
+    # ★ timestamp を完全統一（過去データも救済）
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+
     df = df.sort_values(["videoId", "timestamp"])
     return df
 
