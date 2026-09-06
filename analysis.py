@@ -61,7 +61,17 @@ def save_processed(df):
     if not latest_rows.empty:
         if pd.io.common.file_exists(PROCESSED_CSV):
             df_existing = pd.read_csv(PROCESSED_CSV)
+
+            # ★ 過去の timestamp を datetime に統一
+            df_existing["timestamp"] = pd.to_datetime(df_existing["timestamp"], errors="coerce")
+            latest_rows["timestamp"] = pd.to_datetime(latest_rows["timestamp"], errors="coerce")
+
+            # ★ 結合
             df_all = pd.concat([df_existing, latest_rows], ignore_index=True)
+
+            # ★ 重複除去（videoId + timestamp）
+            df_all = df_all.drop_duplicates(subset=["videoId", "timestamp"], keep="last")
+
             df_all.to_csv(PROCESSED_CSV, index=False)
         else:
             latest_rows.to_csv(PROCESSED_CSV, index=False)
