@@ -6,6 +6,27 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from datetime import datetime
 
+def parse_ts(x):
+    if pd.isna(x):
+        return pd.NaT
+
+    x = str(x).strip()
+
+    formats = [
+        "%Y/%m/%d %H:%M",
+        "%Y/%m/%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%d %H:%M:%S",
+    ]
+
+    for fmt in formats:
+        try:
+            return datetime.strptime(x, fmt)
+        except ValueError:
+            continue
+
+    return pd.NaT
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 RAW_CSV = os.path.join(BASE_DIR, "view_history_hourly_raw.csv")
 PROCESSED_CSV = os.path.join(BASE_DIR, "view_history_hourly_processed.csv")
@@ -40,7 +61,7 @@ def load_csv():
         print("mtime =", time.ctime(st.st_mtime))
 
     df = pd.read_csv(RAW_CSV)
-    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+    df["timestamp"] = df["timestamp"].apply(parse_ts)
 
     # ★ 過去の壊れた行（timestamp 空欄）を完全除去
     df = df.dropna(subset=["timestamp"])
