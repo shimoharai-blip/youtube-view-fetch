@@ -161,17 +161,12 @@ def generate_report(df):
 
     # 波及モデル
     processed_df = pd.read_csv(PROCESSED_CSV)
+
+    # ★★★ ここを追加（processed CSV の timestamp を統一）
+    processed_df["timestamp"] = pd.to_datetime(processed_df["timestamp"], errors="coerce")
+
     propagation = detect_propagation(processed_df)
     md.extend(propagation)
-
-    # グラフ
-    md.append("\n## 📈 時速グラフ（各版）\n")
-    for vid, title in df[["videoId", "title"]].drop_duplicates().values:
-        md.append(f"### {title}")
-        md.append(f"![{title}](graph_{vid}.png)\n")
-
-    with open(REPORT_MD, "w", encoding="utf-8") as f:
-        f.write("\n".join(md))
 
 # =========================
 # メイン処理
