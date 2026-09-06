@@ -9,7 +9,6 @@ RAW_CSV = "view_history_hourly_raw.csv"
 PROCESSED_CSV = "view_history_hourly_processed.csv"
 REPORT_MD = "analysis_report.md"
 
-# 4版のラベル
 VERSION_MAP = {
     "T24rF_x0TmQ": "ABM",
     "xJQ6KrmdpD0": "EL6",
@@ -27,6 +26,9 @@ def load_csv():
     # ★ 過去の壊れた行（timestamp 空欄）を完全除去
     df = df.dropna(subset=["timestamp"])
 
+    # ★ 丸め処理（秒を切り捨てて分単位に統一）
+    df["timestamp"] = df["timestamp"].dt.floor("min")
+
     df = df.sort_values(["videoId", "timestamp"])
     return df
 
@@ -36,19 +38,14 @@ def load_csv():
 def calc_metrics(df):
     gb = df.groupby("videoId")
 
-    # 時速
     df["view_per_hour"] = gb["views"].diff().fillna(0)
-
-    # rolling
     df["roll24"] = gb["view_per_hour"].transform(lambda x: x.rolling(24).mean())
     df["roll7"]  = gb["view_per_hour"].transform(lambda x: x.rolling(7).mean())
     df["rolling_base"] = df["roll24"].fillna(df["roll7"])
 
-    # スパイク強度
     df["spike_strength"] = df["view_per_hour"] / df["rolling_base"].replace(0, np.nan)
     df["spike_strength"] = df["spike_strength"].fillna(0)
 
-    # 版名付与
     df["version"] = df["videoId"].map(VERSION_MAP)
 
     return df
@@ -57,26 +54,25 @@ def calc_metrics(df):
 # processed CSV 追記
 # =========================
 def save_processed(df):
-    # ★ 壊れた行（timestamp / videoId / views のどれか空欄）を完全除去
     df = df.dropna(subset=["timestamp", "videoId", "views"])
 
-    # ★ timestamp がある行だけで最新を取る
     latest_rows = df.groupby("videoId").tail(1)
 
     if not latest_rows.empty:
         if pd.io.common.file_exists(PROCESSED_CSV):
             df_existing = pd.read_csv(PROCESSED_CSV)
 
-            # ★ 過去の壊れた行を完全除去
             df_existing["timestamp"] = pd.to_datetime(df_existing["timestamp"], errors="coerce")
             df_existing = df_existing.dropna(subset=["timestamp", "videoId", "views"])
 
             latest_rows["timestamp"] = pd.to_datetime(latest_rows["timestamp"], errors="coerce")
 
-            # ★ 結合
+            # ★ 丸め処理（raw と processed の timestamp を完全一致させる）
+            df_existing["timestamp"] = df_existing["timestamp"].dt.floor("min")
+            latest_rows["timestamp"] = latest_rows["timestamp"].dt.floor("min")
+
             df_all = pd.concat([df_existing, latest_rows], ignore_index=True)
 
-            # ★ 重複除去（videoId + timestamp）
             df_all = df_all.drop_duplicates(subset=["videoId", "timestamp"], keep="last")
 
             df_all.to_csv(PROCESSED_CSV, index=False)
@@ -84,7 +80,7 @@ def save_processed(df):
             latest_rows.to_csv(PROCESSED_CSV, index=False)
 
 # =========================
-# 波及モデル（lag / strength）
+# 波及モデル
 # =========================
 def detect_propagation(processed_df):
     report = []
@@ -95,7 +91,6 @@ def detect_propagation(processed_df):
         report.append("スパイクなし → 波及なし\n")
         return report
 
-    # 波及元（最強スパイク）
     source = spikes.sort_values("spike_strength", ascending=False).iloc[0]
 
     source_vid = source["videoId"]
@@ -107,7 +102,6 @@ def detect_propagation(processed_df):
     report.append(f"- 強度: {source_strength:.2f}x\n")
     report.append(f"- 発生時刻: {source_time}\n")
 
-    # 波及先
     for _, row in spikes.iterrows():
         if row["videoId"] == source_vid:
             continue
@@ -147,14 +141,13 @@ def generate_graphs(df):
         plt.close(fig)
 
 # =========================
-# レポート生成（ランキング＋波及モデル）
+# レポート生成
 # =========================
 def generate_report(df):
     md = []
     md.append("# 📊 自動分析レポート")
     md.append(f"生成時刻: **{datetime.now()}**\n")
 
-    # ランキング
     gb = df.groupby("videoId")
     ranking = gb.agg(
         total_growth=("views", lambda x: x.iloc[-1] - x.iloc[0]),
@@ -166,20 +159,15 @@ def generate_report(df):
     md.append(ranking.to_markdown())
     md.append("\n")
 
-    # 波及モデル
     processed_df = pd.read_csv(PROCESSED_CSV)
-
-    # ★ processed CSV の timestamp / spike_strength を完全統一
     processed_df["timestamp"] = pd.to_datetime(processed_df["timestamp"], errors="coerce")
+    processed_df["timestamp"] = processed_df["timestamp"].dt.floor("min")
     processed_df["spike_strength"] = pd.to_numeric(processed_df["spike_strength"], errors="coerce")
-
-    # ★ 過去の壊れた行（timestamp 空欄）を完全除去 ← これが重要
     processed_df = processed_df.dropna(subset=["timestamp"])
 
     propagation = detect_propagation(processed_df)
     md.extend(propagation)
 
-    # グラフ
     md.append("\n## 📈 時速グラフ（各版）\n")
     for vid, title in df[["videoId", "title"]].drop_duplicates().values:
         md.append(f"### {title}")
