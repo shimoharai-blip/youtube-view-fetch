@@ -23,6 +23,8 @@ jobs:
           pip install google-api-python-client pandas
 
       - name: Run fetch.py
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: python fetch.py
 
       - name: Commit raw CSV
