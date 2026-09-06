@@ -110,7 +110,7 @@ def save_processed(df):
             df_existing["timestamp"] = pd.to_datetime(df_existing["timestamp"], errors="coerce")
             df_existing = df_existing.dropna(subset=["timestamp", "videoId", "views"])
 
-            latest_rows["timestamp"] = pd.to_datetime(latest_rows["timestamp"], errors="coerce")
+            latest_rows["timestamp"] = latest_rows["timestamp"].apply(parse_ts)
 
             # ★ 丸め処理（raw と processed の timestamp を完全一致させる）
             df_existing["timestamp"] = df_existing["timestamp"].dt.floor("min")
