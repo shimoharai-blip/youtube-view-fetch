@@ -5,113 +5,104 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from datetime import datetime
 
+RAW_CSV = "view_history_hourly_raw.csv"
+PROCESSED_CSV = "view_history_hourly_processed.csv"
+REPORT_MD = "analysis_report.md"
+
+# 4版のラベル
+VERSION_MAP = {
+    "T24rF_x0TmQ": "ABM",
+    "xJQ6KrmdpD0": "EL6",
+    "pRy8kStWlAw": "ShiyunBaau",
+    "SnZvS3f5IrA": "KOMAINU"
+}
+
 # =========================
-# CSV読み込み（高速 & 安定）
+# CSV読み込み（raw）
 # =========================
 def load_csv():
-    df = pd.read_csv("view_history_hourly.csv", parse_dates=["timestamp"])
-
-    # 列名の統一（fetch.py に合わせる）
-    df = df.rename(columns={
-        "videoId": "videoId",
-        "title": "title",
-        "views": "views",
-        "timestamp": "timestamp"
-    })
-
-    if "videoId" not in df.columns:
-        raise ValueError("CSV に videoId 列がありません。fetch.py の出力を確認してください。")
-
+    df = pd.read_csv(RAW_CSV, parse_dates=["timestamp"])
     df = df.sort_values(["videoId", "timestamp"])
     return df
 
-
 # =========================
-# メトリクス計算（高速化）
+# メトリクス計算（完全統合）
 # =========================
 def calc_metrics(df):
     gb = df.groupby("videoId")
 
-    # 時速（numpyで高速化）
+    # 時速
     df["view_per_hour"] = gb["views"].diff().fillna(0)
 
-    # rolling(24) + fallback rolling(7)
+    # rolling
     df["roll24"] = gb["view_per_hour"].transform(lambda x: x.rolling(24).mean())
     df["roll7"]  = gb["view_per_hour"].transform(lambda x: x.rolling(7).mean())
     df["rolling_base"] = df["roll24"].fillna(df["roll7"])
 
-    # スパイク強度（誤検出防止）
+    # スパイク強度
     df["spike_strength"] = df["view_per_hour"] / df["rolling_base"].replace(0, np.nan)
     df["spike_strength"] = df["spike_strength"].fillna(0)
 
+    # 版名付与
+    df["version"] = df["videoId"].map(VERSION_MAP)
+
     return df
 
+# =========================
+# processed CSV 追記
+# =========================
+def save_processed(df):
+    latest_rows = df.groupby("videoId").tail(1)
+
+    if not latest_rows.empty:
+        if pd.io.common.file_exists(PROCESSED_CSV):
+            df_existing = pd.read_csv(PROCESSED_CSV)
+            df_all = pd.concat([df_existing, latest_rows], ignore_index=True)
+            df_all.to_csv(PROCESSED_CSV, index=False)
+        else:
+            latest_rows.to_csv(PROCESSED_CSV, index=False)
 
 # =========================
-# 成長速度ランキング（精度改善）
+# 波及モデル（lag / strength）
 # =========================
-def generate_ranking(df):
-    gb = df.groupby("videoId")
+def detect_propagation(processed_df):
+    report = []
+    report.append("\n# 4版 波及モデル\n")
 
-    ranking = gb.agg(
-        total_growth=("views", lambda x: x.iloc[-1] - x.iloc[0]),
-        avg_hourly=("view_per_hour", "mean"),
-        max_spike=("spike_strength", "max")
-    )
+    spikes = processed_df[processed_df["spike_strength"] > 3]
+    if len(spikes) == 0:
+        report.append("スパイクなし → 波及なし\n")
+        return report
 
-    # 正規化（スコアの偏りを防ぐ）
-    ranking["norm_growth"] = ranking["total_growth"] / ranking["total_growth"].max()
-    ranking["norm_hourly"] = ranking["avg_hourly"] / ranking["avg_hourly"].max()
-    ranking["norm_spike"]  = ranking["max_spike"] / ranking["max_spike"].max()
+    # 波及元（最強スパイク）
+    source = spikes.sort_values("spike_strength", ascending=False).iloc[0]
 
-    ranking["score"] = (
-        ranking["norm_growth"] * 0.4 +
-        ranking["norm_hourly"] * 0.4 +
-        ranking["norm_spike"]  * 0.2
-    )
+    source_vid = source["videoId"]
+    source_title = source["title"]
+    source_time = pd.to_datetime(source["timestamp"])
+    source_strength = source["spike_strength"]
 
-    return ranking.sort_values("score", ascending=False)
+    report.append(f"## 波及元: {source_title} ({source_vid})\n")
+    report.append(f"- 強度: {source_strength:.2f}x\n")
+    report.append(f"- 発生時刻: {source_time}\n")
 
+    # 波及先
+    for _, row in spikes.iterrows():
+        if row["videoId"] == source_vid:
+            continue
 
-# =========================
-# スパイク検出（精度改善）
-# =========================
-def detect_spikes(df):
-    return df[df["spike_strength"] > 3]
+        target_time = pd.to_datetime(row["timestamp"])
+        lag = (target_time - source_time).total_seconds() / 3600
+        strength = row["spike_strength"] / source_strength * 100
 
+        report.append(f"\n### {source_title} → {row['title']}")
+        report.append(f"- lag: {lag:.1f}h")
+        report.append(f"- strength: {strength:.1f}%")
 
-# =========================
-# 海外流入検出（深夜・早朝・日中の伸びを比較）
-# =========================
-def detect_overseas_inflow(df):
-    df["hour"] = df["timestamp"].dt.hour
-
-    late = df[(df["hour"] >= 23) | (df["hour"] <= 3)]
-    early = df[(df["hour"] >= 4) & (df["hour"] <= 8)]
-    daytime = df[(df["hour"] >= 10) & (df["hour"] <= 17)]
-
-    def ratio(sub):
-        if len(sub) == 0:
-            return 0
-        return (sub["view_per_hour"].mean() /
-                sub["rolling_base"].mean())
-
-    late_ratio = ratio(late)
-    early_ratio = ratio(early)
-    day_ratio = ratio(daytime)
-
-    score = (late_ratio + early_ratio + day_ratio) / 3
-
-    return {
-        "late_ratio": late_ratio,
-        "early_ratio": early_ratio,
-        "day_ratio": day_ratio,
-        "score": score
-    }
-
+    return report
 
 # =========================
-# グラフ生成（高速化）
+# グラフ生成
 # =========================
 def generate_graphs(df):
     for vid, title in df[["videoId", "title"]].drop_duplicates().values:
@@ -122,7 +113,6 @@ def generate_graphs(df):
         fig, ax = plt.subplots(figsize=(10, 4))
         ax.plot(x, y, color="blue", linewidth=1.2)
 
-        # スパイク点を赤でマーキング
         spikes = sub[sub["spike_strength"] > 3]
         if len(spikes) > 0:
             ax.scatter(spikes["timestamp"], spikes["view_per_hour"], color="red", s=30)
@@ -135,65 +125,39 @@ def generate_graphs(df):
         fig.savefig(f"graph_{vid}.png", dpi=120)
         plt.close(fig)
 
-
 # =========================
-# レポート生成（海外流入統合）
+# レポート生成（ランキング＋波及モデル）
 # =========================
-def generate_report(ranking, spikes, df):
+def generate_report(df):
     md = []
-
     md.append("# 📊 自動分析レポート")
     md.append(f"生成時刻: **{datetime.now()}**\n")
 
-    # ハイライト
-    top = ranking.iloc[0]
-    md.append("## 🔥 今日のハイライト\n")
-    md.append(f"- **最も伸びた動画**: {top.name}")
-    md.append(f"- **総成長**: {int(top.total_growth):,} views")
-    md.append(f"- **平均時速**: {top.avg_hourly:.1f} views/h")
-    md.append(f"- **最大スパイク**: {top.max_spike:.2f}x\n")
-
     # ランキング
+    gb = df.groupby("videoId")
+    ranking = gb.agg(
+        total_growth=("views", lambda x: x.iloc[-1] - x.iloc[0]),
+        avg_hourly=("view_per_hour", "mean"),
+        max_spike=("spike_strength", "max")
+    ).sort_values("avg_hourly", ascending=False)
+
     md.append("## 🏆 成長速度ランキング\n")
     md.append(ranking.to_markdown())
     md.append("\n")
 
-    # スパイク検出
-    md.append("## ⚡ スパイク検出\n")
-    if len(spikes) == 0:
-        md.append("> **スパイクなし（安定しています）**\n")
-    else:
-        md.append("> **スパイク発生！** 以下の時間帯で急増が確認されました。\n")
-        md.append(spikes[["timestamp", "title", "view_per_hour", "spike_strength"]].to_markdown())
-    md.append("\n")
-
-    # 海外流入検出
-    md.append("## 🌏 海外流入の検出\n")
-    overseas = detect_overseas_inflow(df)
-
-    md.append(f"- 深夜帯の強度: **{overseas['late_ratio']:.2f}x**")
-    md.append(f"- 早朝帯の強度: **{overseas['early_ratio']:.2f}x**")
-    md.append(f"- 日中帯の強度: **{overseas['day_ratio']:.2f}x**")
-    md.append(f"- 総合スコア: **{overseas['score']:.2f}**\n")
-
-    if overseas["score"] >= 0.7:
-        md.append("> **海外流入が強く再発しています（スパイク前兆）**\n")
-    elif overseas["score"] >= 0.4:
-        md.append("> **弱い海外流入が発生中（再発の前兆）**\n")
-    else:
-        md.append("> **海外流入は観測されていません（国内中心）**\n")
-
-    md.append("\n")
+    # 波及モデル
+    processed_df = pd.read_csv(PROCESSED_CSV)
+    propagation = detect_propagation(processed_df)
+    md.extend(propagation)
 
     # グラフ
-    md.append("## 📈 時速グラフ（各版）\n")
+    md.append("\n## 📈 時速グラフ（各版）\n")
     for vid, title in df[["videoId", "title"]].drop_duplicates().values:
         md.append(f"### {title}")
         md.append(f"![{title}](graph_{vid}.png)\n")
 
-    with open("analysis_report.md", "w", encoding="utf-8") as f:
+    with open(REPORT_MD, "w", encoding="utf-8") as f:
         f.write("\n".join(md))
-
 
 # =========================
 # メイン処理
@@ -201,10 +165,9 @@ def generate_report(ranking, spikes, df):
 def main():
     df = load_csv()
     df = calc_metrics(df)
-    ranking = generate_ranking(df)
-    spikes = detect_spikes(df)
-
+    save_processed(df)
     generate_graphs(df)
-    generate_report(ranking, spikes, df)
+    generate_report(df)
+    print("analysis.py 完了：processed CSV とレポートを更新しました")
 
 main()
