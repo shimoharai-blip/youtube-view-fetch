@@ -81,14 +81,53 @@ def load_csv():
 def calc_metrics(df):
     gb = df.groupby("videoId")
 
-    df["view_per_hour"] = gb["views"].diff().fillna(0)
-    df["roll24"] = gb["view_per_hour"].transform(lambda x: x.rolling(24).mean())
-    df["roll7"]  = gb["view_per_hour"].transform(lambda x: x.rolling(7).mean())
+    # =========================
+    # 1. 実時間差（時間）
+    # =========================
+    df["time_diff_hours"] = gb["timestamp"].diff().dt.total_seconds() / 3600
+
+    # =========================
+    # 2. views 差分
+    # =========================
+    df["views_diff"] = gb["views"].diff()
+
+    # =========================
+    # 3. view_per_hour（views_diff ÷ 実時間差）
+    # =========================
+    df["view_per_hour"] = df.apply(
+        lambda row: row["views_diff"] / row["time_diff_hours"]
+        if row["time_diff_hours"] and row["time_diff_hours"] > 0 else 0,
+        axis=1
+    )
+
+    # =========================
+    # 4. 過去24時間平均（時間ベース rolling）
+    # =========================
+    df["roll24"] = gb.apply(
+        lambda g: g.set_index("timestamp")["view_per_hour"].rolling("24H").mean()
+    ).reset_index(level=0, drop=True)
+
+    # =========================
+    # 5. 過去7時間平均（時間ベース rolling）
+    # =========================
+    df["roll7"] = gb.apply(
+        lambda g: g.set_index("timestamp")["view_per_hour"].rolling("7H").mean()
+    ).reset_index(level=0, drop=True)
+
+    # =========================
+    # 6. rolling_base（24H優先 → fallback 7H）
+    # =========================
     df["rolling_base"] = df["roll24"].fillna(df["roll7"])
 
+    # =========================
+    # 7. spike_strength（本物のスパイク強度）
+    # =========================
     df["spike_strength"] = df["view_per_hour"] / df["rolling_base"].replace(0, np.nan)
     df["spike_strength"] = df["spike_strength"].fillna(0)
 
+    # =========================
+    # 8. version
+    # =========================
     df["version"] = df["videoId"].map(VERSION_MAP)
 
     return df
