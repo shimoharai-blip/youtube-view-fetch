@@ -162,6 +162,9 @@ def generate_report(df):
     # 波及モデル
     processed_df = pd.read_csv(PROCESSED_CSV)
 
+processed_df["timestamp"] = pd.to_datetime(processed_df["timestamp"], errors="coerce")
+processed_df["spike_strength"] = pd.to_numeric(processed_df["spike_strength"], errors="coerce")
+
     # ★★★ ここを追加（processed CSV の timestamp を統一）
     processed_df["timestamp"] = pd.to_datetime(processed_df["timestamp"], errors="coerce")
 
