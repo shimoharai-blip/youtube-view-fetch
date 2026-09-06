@@ -29,6 +29,9 @@ def load_csv():
     # ★ 丸め処理（秒を切り捨てて分単位に統一）
     df["timestamp"] = df["timestamp"].dt.floor("min")
 
+    print("=== RAW CSV 読み込み直後の timestamp 最新20行 ===")
+    print(df.sort_values("timestamp").tail(20)[["timestamp", "videoId", "views"]])
+
     df = df.sort_values(["videoId", "timestamp"])
     return df
 
@@ -57,7 +60,9 @@ def save_processed(df):
     df = df.dropna(subset=["timestamp", "videoId", "views"])
 
     latest_rows = df.groupby("videoId").tail(1)
-
+    print("=== latest_rows ===")
+    print(latest_rows[["timestamp", "videoId", "views"]])
+    
     if not latest_rows.empty:
         if pd.io.common.file_exists(PROCESSED_CSV):
             df_existing = pd.read_csv(PROCESSED_CSV)
