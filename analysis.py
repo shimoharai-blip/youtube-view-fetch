@@ -82,8 +82,8 @@ def calc_metrics(df):
     df = df.dropna(subset=["timestamp"])
     df = df.sort_values(["videoId", "timestamp"])
 
-    # ★ df の index を timestamp にする（必須）
-    df = df.set_index("timestamp")
+    # 元の df.index（整数）を保持
+    original_index = df.index
 
     df["time_diff_hours"] = 0.0
     df["views_diff"] = 0.0
@@ -92,31 +92,40 @@ def calc_metrics(df):
     df["roll7"] = np.nan
 
     for vid, g in df.groupby("videoId"):
-        g = g.copy()
+        # g は元の df の行番号を保持している
+        idx = g.index  # ← これが整数 index（絶対にユニーク）
 
-        g["time_diff_hours"] = g.index.to_series().diff().dt.total_seconds() / 3600
-        g["views_diff"] = g["views"].diff()
-        g["view_per_hour"] = g.apply(
+        # rolling 計算用に timestamp を index にしたコピーを作る
+        g2 = g.copy()
+        g2 = g2.set_index("timestamp")
+
+        # 実時間差
+        g2["time_diff_hours"] = g2.index.to_series().diff().dt.total_seconds() / 3600
+        g2["views_diff"] = g2["views"].diff()
+
+        # 時速
+        g2["view_per_hour"] = g2.apply(
             lambda row: row["views_diff"] / row["time_diff_hours"]
             if row["time_diff_hours"] and row["time_diff_hours"] > 0 else 0,
             axis=1
         )
 
-        g["roll24"] = g["view_per_hour"].rolling("24h").mean()
-        g["roll7"] = g["view_per_hour"].rolling("7h").mean()
+        # rolling 計算
+        g2["roll24"] = g2["view_per_hour"].rolling("24h").mean()
+        g2["roll7"] = g2["view_per_hour"].rolling("7h").mean()
 
-        df.loc[g.index, ["time_diff_hours","views_diff","view_per_hour","roll24","roll7"]] = \
-            g[["time_diff_hours","views_diff","view_per_hour","roll24","roll7"]]
+        # df に戻す（元の整数 indexで代入する）
+        df.loc[idx, "time_diff_hours"] = g2["time_diff_hours"].values
+        df.loc[idx, "views_diff"] = g2["views_diff"].values
+        df.loc[idx, "view_per_hour"] = g2["view_per_hour"].values
+        df.loc[idx, "roll24"] = g2["roll24"].values
+        df.loc[idx, "roll7"] = g2["roll7"].values
 
     df["rolling_base"] = df["roll24"].fillna(df["roll7"])
     df["spike_strength"] = df["view_per_hour"] / df["rolling_base"].replace(0, np.nan)
     df["spike_strength"] = df["spike_strength"].fillna(0)
 
     df["version"] = df["videoId"].map(VERSION_MAP)
-
-    # ★ 必要なら index を戻す
-    df = df.reset_index()
-
     return df
 
 # =========================
