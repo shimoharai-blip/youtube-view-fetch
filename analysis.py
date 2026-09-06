@@ -82,6 +82,9 @@ def calc_metrics(df):
     df = df.dropna(subset=["timestamp"])
     df = df.sort_values(["videoId", "timestamp"])
 
+    # ★ df の index を timestamp にする（必須）
+    df = df.set_index("timestamp")
+
     df["time_diff_hours"] = 0.0
     df["views_diff"] = 0.0
     df["view_per_hour"] = 0.0
@@ -91,8 +94,7 @@ def calc_metrics(df):
     for vid, g in df.groupby("videoId"):
         g = g.copy()
 
-        # 実時間差
-        g["time_diff_hours"] = g["timestamp"].diff().dt.total_seconds() / 3600
+        g["time_diff_hours"] = g.index.to_series().diff().dt.total_seconds() / 3600
         g["views_diff"] = g["views"].diff()
         g["view_per_hour"] = g.apply(
             lambda row: row["views_diff"] / row["time_diff_hours"]
@@ -100,23 +102,21 @@ def calc_metrics(df):
             axis=1
         )
 
-        # 時間窓 rolling
-        g = g.set_index("timestamp")
         g["roll24"] = g["view_per_hour"].rolling("24h").mean()
         g["roll7"] = g["view_per_hour"].rolling("7h").mean()
 
-        # df に戻す
-        df.loc[g.index, "time_diff_hours"] = g["time_diff_hours"].values
-        df.loc[g.index, "views_diff"] = g["views_diff"].values
-        df.loc[g.index, "view_per_hour"] = g["view_per_hour"].values
-        df.loc[g.index, "roll24"] = g["roll24"].values
-        df.loc[g.index, "roll7"] = g["roll7"].values
+        df.loc[g.index, ["time_diff_hours","views_diff","view_per_hour","roll24","roll7"]] = \
+            g[["time_diff_hours","views_diff","view_per_hour","roll24","roll7"]]
 
     df["rolling_base"] = df["roll24"].fillna(df["roll7"])
     df["spike_strength"] = df["view_per_hour"] / df["rolling_base"].replace(0, np.nan)
     df["spike_strength"] = df["spike_strength"].fillna(0)
 
     df["version"] = df["videoId"].map(VERSION_MAP)
+
+    # ★ 必要なら index を戻す
+    df = df.reset_index()
+
     return df
 
 # =========================
