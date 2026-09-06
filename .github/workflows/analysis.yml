@@ -1,0 +1,34 @@
+name: Analyze YouTube Data
+
+on:
+  schedule:
+    - cron: "55 * * * *"
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy matplotlib
+
+      - name: Run analysis.py
+        run: python analysis.py
+
+      - name: Commit analysis outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add view_history_hourly_processed.csv analysis_report.md propagation_graph.png graph_*.png
+          git commit -m "Update processed CSV and analysis report"
+          git push
