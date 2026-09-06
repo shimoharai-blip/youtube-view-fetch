@@ -57,14 +57,20 @@ def calc_metrics(df):
 # processed CSV 追記
 # =========================
 def save_processed(df):
+    # ★ 壊れた行（timestamp / videoId / views のどれか空欄）を完全除去
+    df = df.dropna(subset=["timestamp", "videoId", "views"])
+
+    # ★ timestamp がある行だけで最新を取る
     latest_rows = df.groupby("videoId").tail(1)
 
     if not latest_rows.empty:
         if pd.io.common.file_exists(PROCESSED_CSV):
             df_existing = pd.read_csv(PROCESSED_CSV)
 
-            # ★ 過去の timestamp を datetime に統一
+            # ★ 過去の壊れた行を完全除去
             df_existing["timestamp"] = pd.to_datetime(df_existing["timestamp"], errors="coerce")
+            df_existing = df_existing.dropna(subset=["timestamp", "videoId", "views"])
+
             latest_rows["timestamp"] = pd.to_datetime(latest_rows["timestamp"], errors="coerce")
 
             # ★ 結合
