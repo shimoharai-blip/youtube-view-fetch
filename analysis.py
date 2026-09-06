@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 import matplotlib
@@ -5,9 +6,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-RAW_CSV = "view_history_hourly_raw.csv"
-PROCESSED_CSV = "view_history_hourly_processed.csv"
-REPORT_MD = "analysis_report.md"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+RAW_CSV = os.path.join(BASE_DIR, "view_history_hourly_raw.csv")
+PROCESSED_CSV = os.path.join(BASE_DIR, "view_history_hourly_processed.csv")
+REPORT_MD = os.path.join(BASE_DIR, "analysis_report.md")
 
 VERSION_MAP = {
     "T24rF_x0TmQ": "ABM",
