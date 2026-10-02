@@ -158,6 +158,40 @@ def save_processed(df):
             df_all.to_csv(PROCESSED_CSV, index=False)
         else:
             latest_rows.to_csv(PROCESSED_CSV, index=False)
+    # =========================
+    # 月別CSV自動生成（GitHub閲覧用）
+    # =========================
+
+    MONTHLY_DIR = os.path.join(BASE_DIR, "data", "processed")
+    os.makedirs(MONTHLY_DIR, exist_ok=True)
+
+    df_all = pd.read_csv(PROCESSED_CSV)
+
+    df_all["timestamp"] = pd.to_datetime(
+        df_all["timestamp"],
+        errors="coerce"
+    )
+
+    df_all = df_all.dropna(subset=["timestamp"])
+
+    df_all["month"] = df_all["timestamp"].dt.strftime("%Y-%m")
+
+    for month, group in df_all.groupby("month"):
+
+        monthly_file = os.path.join(
+            MONTHLY_DIR,
+            f"{month}.csv"
+        )
+
+        group = group.drop(columns=["month"])
+
+        group.to_csv(
+            monthly_file,
+            index=False,
+            encoding="utf-8-sig"
+        )
+
+        print(f"月別CSV更新: {monthly_file}")
 
 # =========================
 # 波及モデル
