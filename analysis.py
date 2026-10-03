@@ -158,8 +158,9 @@ def save_processed(df):
             df_all.to_csv(PROCESSED_CSV, index=False)
         else:
             latest_rows.to_csv(PROCESSED_CSV, index=False)
+
     # =========================
-    # 月別CSV自動生成（GitHub閲覧用）
+    # 月別CSV：新規データだけ追記
     # =========================
 
     MONTHLY_DIR = os.path.join(BASE_DIR, "data", "processed")
@@ -172,26 +173,78 @@ def save_processed(df):
         errors="coerce"
     )
 
-    df_all = df_all.dropna(subset=["timestamp"])
+    df_all = df_all.dropna(subset=["timestamp", "videoId"])
 
-    df_all["month"] = df_all["timestamp"].dt.strftime("%Y-%m")
+    if df_all.empty:
+        print("月別CSV：有効なデータがありません")
+        return
 
-    for month, group in df_all.groupby("month"):
+    # 最新データの年月を取得
+    current_month = df_all["timestamp"].max().strftime("%Y-%m")
 
-        monthly_file = os.path.join(
-            MONTHLY_DIR,
-            f"{month}.csv"
+    # 当月分だけ抽出
+    monthly_df = df_all[
+        df_all["timestamp"].dt.strftime("%Y-%m") == current_month
+    ].copy()
+
+    monthly_file = os.path.join(
+        MONTHLY_DIR,
+        f"{current_month}.csv"
+    )
+
+    # timestampを分単位に統一
+    monthly_df["timestamp"] = monthly_df["timestamp"].dt.floor("min")
+
+    if os.path.exists(monthly_file):
+
+        existing = pd.read_csv(monthly_file)
+
+        existing["timestamp"] = pd.to_datetime(
+            existing["timestamp"],
+            errors="coerce"
         )
 
-        group = group.drop(columns=["month"])
+        existing = existing.dropna(subset=["timestamp", "videoId"])
+        existing["timestamp"] = existing["timestamp"].dt.floor("min")
 
-        group.to_csv(
+        # 既存データのキー
+        existing_keys = set(
+            zip(
+                existing["videoId"],
+                existing["timestamp"]
+            )
+        )
+
+        # 未登録データだけ抽出
+        new_rows = monthly_df[
+            ~monthly_df.set_index(["videoId", "timestamp"]).index.isin(
+                existing_keys
+            )
+        ]
+
+        if not new_rows.empty:
+            new_rows.to_csv(
+                monthly_file,
+                mode="a",
+                header=False,
+                index=False,
+                encoding="utf-8-sig"
+            )
+
+            print(f"月別CSV：{len(new_rows)}行を追記")
+
+        else:
+            print("月別CSV：新規データなし")
+
+    else:
+
+        monthly_df.to_csv(
             monthly_file,
             index=False,
             encoding="utf-8-sig"
         )
 
-        print(f"月別CSV更新: {monthly_file}")
+        print(f"月別CSV初回作成: {monthly_file}")
 
 # =========================
 # 波及モデル
