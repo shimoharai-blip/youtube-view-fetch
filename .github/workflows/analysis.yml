@@ -1,12 +1,15 @@
 name: Analyze YouTube Data
 
 on:
-  schedule:
-    - cron: "55 * * * *"
+  workflow_run:
+    workflows: ["Fetch YouTube Raw Data"]
+    types:
+      - completed
   workflow_dispatch:
 
 jobs:
   analyze:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
 
     steps:
