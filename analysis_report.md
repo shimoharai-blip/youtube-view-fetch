@@ -1,69 +1,57 @@
 # 📊 自動分析レポート
-生成時刻: **2026-10-10 02:00:10.246984**
+生成時刻: **2026-10-10 03:00:13.076607**
 
 ## 🏆 成長速度ランキング
 
 | videoId     |     total_growth |   avg_hourly |   max_spike |
 |:------------|-----------------:|-------------:|------------:|
-| T24rF_x0TmQ |      8.77984e+06 |    10815.5   |     3.81418 |
-| xJQ6KrmdpD0 |      1.554e+06   |     1846.69  |     3.06987 |
-| SnZvS3f5IrA | 528188           |      631.199 |     6.03555 |
-| pRy8kStWlAw | 328207           |      391.549 |     5.07579 |
+| T24rF_x0TmQ |      8.79441e+06 |    10820.3   |     3.81418 |
+| xJQ6KrmdpD0 |      1.5562e+06  |     1847.12  |     3.06987 |
+| SnZvS3f5IrA | 528681           |      631.031 |     6.03555 |
+| pRy8kStWlAw | 369090           |      440.809 |    12.2969  |
 
 
 
 # 4版 波及モデル
 
-## 波及元: ヤラララ／Cover - KOMAINU. (SnZvS3f5IrA)
+## 波及元: 'ヤラララ' (YARARARA) ／Cover -しゆん×ばぁう (pRy8kStWlAw)
 
-- 強度: 6.04x
+- 強度: 12.30x
 
-- 発生時刻: 2026-10-05 10:18:00
+- 発生時刻: 2026-10-10 11:59:00
 
 
-### ヤラララ／Cover - KOMAINU. → 【以心伝心】新人歌い手グループが『ヤラララ』を本気で歌ってみたら...【EL6】
-- lag: -489.4h
-- strength: 50.9%
+### 'ヤラララ' (YARARARA) ／Cover -しゆん×ばぁう → 【以心伝心】新人歌い手グループが『ヤラララ』を本気で歌ってみたら...【EL6】
+- lag: -611.0h
+- strength: 25.0%
 
-### ヤラララ／Cover - KOMAINU. → [MV] ABM - 'ヤラララ' (YARARARA) feat. 重音テト
-- lag: -148.3h
-- strength: 55.0%
+### 'ヤラララ' (YARARARA) ／Cover -しゆん×ばぁう → [MV] ABM - 'ヤラララ' (YARARARA) feat. 重音テト
+- lag: -270.0h
+- strength: 27.0%
 
-### ヤラララ／Cover - KOMAINU. → [MV] ABM - 'ヤラララ' (YARARARA) feat. 重音テト
-- lag: -147.4h
-- strength: 63.2%
+### 'ヤラララ' (YARARARA) ／Cover -しゆん×ばぁう → [MV] ABM - 'ヤラララ' (YARARARA) feat. 重音テト
+- lag: -269.1h
+- strength: 31.0%
 
-### ヤラララ／Cover - KOMAINU. → [MV] ABM - 'ヤラララ' (YARARARA) feat. 重音テト
-- lag: -146.4h
-- strength: 50.6%
+### 'ヤラララ' (YARARARA) ／Cover -しゆん×ばぁう → [MV] ABM - 'ヤラララ' (YARARARA) feat. 重音テト
+- lag: -268.1h
+- strength: 24.8%
 
-### ヤラララ／Cover - KOMAINU. → [MV] ABM - 'ヤラララ' (YARARARA) feat. 重音テト
-- lag: -145.4h
-- strength: 52.3%
+### 'ヤラララ' (YARARARA) ／Cover -しゆん×ばぁう → [MV] ABM - 'ヤラララ' (YARARARA) feat. 重音テト
+- lag: -267.1h
+- strength: 25.7%
 
-### ヤラララ／Cover - KOMAINU. → [MV] ABM - 'ヤラララ' (YARARARA) feat. 重音テト
-- lag: -144.3h
-- strength: 54.3%
+### 'ヤラララ' (YARARARA) ／Cover -しゆん×ばぁう → [MV] ABM - 'ヤラララ' (YARARARA) feat. 重音テト
+- lag: -266.0h
+- strength: 26.6%
 
-### ヤラララ／Cover - KOMAINU. → [MV] ABM - 'ヤラララ' (YARARARA) feat. 重音テト
-- lag: -142.3h
-- strength: 54.6%
+### 'ヤラララ' (YARARARA) ／Cover -しゆん×ばぁう → [MV] ABM - 'ヤラララ' (YARARARA) feat. 重音テト
+- lag: -264.0h
+- strength: 26.8%
 
-### ヤラララ／Cover - KOMAINU. → 'ヤラララ' (YARARARA) ／Cover -しゆん×ばぁう
-- lag: 48.7h
-- strength: 84.1%
-
-### ヤラララ／Cover - KOMAINU. → 'ヤラララ' (YARARARA) ／Cover -しゆん×ばぁう
-- lag: 49.7h
-- strength: 65.3%
-
-### ヤラララ／Cover - KOMAINU. → 'ヤラララ' (YARARARA) ／Cover -しゆん×ばぁう
-- lag: 50.7h
-- strength: 55.3%
-
-### ヤラララ／Cover - KOMAINU. → 'ヤラララ' (YARARARA) ／Cover -しゆん×ばぁう
-- lag: 62.7h
-- strength: 67.0%
+### 'ヤラララ' (YARARARA) ／Cover -しゆん×ばぁう → ヤラララ／Cover - KOMAINU.
+- lag: -121.7h
+- strength: 49.1%
 
 ## 📈 時速グラフ（各版）
 
